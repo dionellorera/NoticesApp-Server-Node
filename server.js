@@ -21,23 +21,7 @@ admin.initializeApp({
 
 //express
 app.post('/user/create', function (req, res) {
-	createUser(req.body.username, req.body.email, req.body.name, req.body.type, req.body.password, req.body.photo, res);
-	
-	// admin.auth().createUser({
-	//   email: req.body.email,
-	//   emailVerified: false,
-	//   password: req.body.password,
-	//   displayName: req.body.nickname, 
-	//   photoURL: "http://i1.wp.com/www.techrepublic.com/bundles/techrepubliccore/images/icons/standard/icon-user-default.png",
-	//   disabled: false
-	// }).then(function(userRecord) {
-	//     // See the UserRecord reference doc for the contents of userRecord.
-	//     // res.status(200).send("Successfully created new user:" + userRecord.uid);
-	//     // createUser("d1@tagcash.com", "r32fsd4f3", "Dondskie", "normal");
-	//     res.status(200).send({status: "success"});
-	// }).catch(function(error) {
-	// 	res.status(403).send({errorMessage: error}); 
-	// });
+	createUser(req.body.username, req.body.email, req.body.name, req.body.type, req.body.password, req.body.photo, res); 
 });
 
 app.post('/user/update', function(req, res){
@@ -89,8 +73,7 @@ app.post('/user/login', function(req, res){
 app.post('/fcm/register', function(req, res){
 	registerFcm(req.body.username, req.body.type, req.body.token, res) 
 }); 
-
-//run server
+ 
 var server = app.listen(8080, function () {
    var host = server.address().address;
    var port = server.address().port;
@@ -133,14 +116,7 @@ function createUser(uname, eadd, name, type, p, ph, res) {
 		
 	}, function (errorObject) {
 		res.status(403).send(errorObject.code);  
-	});
- 	// if (!f) {
- 	// 	f.set(object); 
-		// res.status(200).send(object); 	
- 	// } else {
- 	// 	res.status(403).send({errorMessage: "Username not available, please think another and try again"});
- 	// }
-	
+	}); 
 }
 
 function registerFcm(uname, type, t, res) {
