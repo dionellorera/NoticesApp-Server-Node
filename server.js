@@ -49,12 +49,36 @@ app.post('/user/delete', function(req, res){
 }); 
 
 app.post('/user/login', function(req, res){ 
+	login(req.body.type, req.body.username, req.body.password, res); 
+}); 
+
+
+app.post('/fcm/register', function(req, res){
+	registerFcm(req.body.username, req.body.type, req.body.token, res) 
+}); 
+
+app.post('/fcm/send/all', function(req, res){
+	sendNotificationToAll(req.body.payload, res);
+}); 
+
+app.post('/fcm/send/user', function(req, res){
+	sendNotificationToUser(req.body.payload, req.body.username, req.body.type, res);
+}); 
+ 
+var server = app.listen(8080, function () {
+   var host = server.address().address;
+   var port = server.address().port;
+   
+   console.log("Example app listening at http://%s:%s", host, port);
+});
+
+function login(type, username, password, res) {
 	var db = admin.database();
-	var ref = db.ref("accounts/"+req.body.type+"/"+req.body.username);	 //admin or normal
+	var ref = db.ref("accounts/"+type+"/"+username);	 //admin or normal
 	ref.once("value", function(snapshot) {
 		var resp = snapshot.val();
 		if (resp) {
-			if (req.body.password == resp.password) {
+			if (password == resp.password) {
 			res.status(200).send(resp); 	
 			} else {
 				res.status(403).send({errorMessage: "Incorrect Password"}); 
@@ -66,21 +90,7 @@ app.post('/user/login', function(req, res){
 	}, function (errorObject) {
 		res.status(403).send(errorObject.code);  
 	});
-	
-}); 
-
-
-app.post('/fcm/register', function(req, res){
-	registerFcm(req.body.username, req.body.type, req.body.token, res) 
-}); 
- 
-var server = app.listen(8080, function () {
-   var host = server.address().address;
-   var port = server.address().port;
-   
-   console.log("Example app listening at http://%s:%s", host, port);
-});
-
+}
 function createNotice(sm, notice, u, d, t) { 
 	var db = admin.database();
 	var ref = db.ref("notices/admin");	
@@ -128,5 +138,58 @@ function registerFcm(uname, type, t, res) {
 	 	}; 
 	f.update(object); 
 	res.status(200).send({status: "success"}); 
+}
+
+function sendNotificationToAll(payload, res) { 
+	var db = admin.database();
+	var ref = db.ref("accounts");
+	var errorCode = 200;
+	var error = "success";
+	ref.once("value", function(snapshot) {
+		var resp = snapshot.val(); 
+		var tempObject = {};
+		for(var i in resp){ 
+		  for(var j in resp[i]) { 
+		 	for(var k in resp[i][j]){ 
+		 		if (k == "token") {
+		 			admin.messaging().sendToDevice(resp[i][j][k], payload)
+					  .then(function(response) {   
+					  })
+					  .catch(function(error) { 
+					  }); 	
+		 		} 	
+		 	}
+		  }
+		} 
+	}, function (errorObject) {
+		errorCode = 403;
+		error = errorObject.code; 
+	});
+
+	res.status(errorCode).send({message:errorCode}); 	 
+}
+
+function sendNotificationToUser(payload, username, type, res) { 
+	var db = admin.database(); 
+	var ref = db.ref("accounts/"+type);	 //admin or normal
+	var f = ref.child(username); 
+	f.once("value", function(snapshot) {
+		var resp = snapshot.val(); 
+		if (resp) {
+			admin.messaging().sendToDevice(resp.token, payload)
+			  .then(function(response) {   
+			  	res.status(200).send(response); 	
+			  })
+			  .catch(function(error) { 
+			  	res.status(403).send(error); 
+			  }); 
+		} else {
+			res.status(403).send({error: "No user found"}); 
+		}
+			
+		
+	}, function (errorObject) {
+		res.status(403).send(errorObject.code); 	 
+	});
 }
 
