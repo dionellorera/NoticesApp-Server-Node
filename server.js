@@ -20,8 +20,22 @@ admin.initializeApp({
 });
 
 //express
-app.post('/user/create', function (req, res) {
-	createUser(req.body.username, req.body.email, req.body.name, req.body.type, req.body.password, req.body.photo, res); 
+app.post('/user/create', function (req, res) { 
+	//firebase authentication register
+	admin.auth().createUser({
+	  email: req.body.email,
+	  emailVerified: false,
+	  password: req.body.password,
+	  displayName: req.body.name,
+	  photoURL: req.body.photo,
+	  disabled: false
+	}).then(function(userRecord) {
+		createUser(req.body.username, req.body.email, req.body.name, req.body.type, req.body.password, req.body.photo, res); 
+	    // See the UserRecord reference doc for the contents of userRecord.
+	    // console.log("Successfully created new user:", userRecord.uid);
+	  }).catch(function(error) {
+	    res.status(403).send({errorMessage: "Email should be valid, username and password should be 6 characters or more or email is taken"});
+	  });
 });
 
 app.post('/user/update', function(req, res){
@@ -74,18 +88,44 @@ var server = app.listen(8080, function () {
 
 function login(type, username, password, res) {
 	var db = admin.database();
-	var ref = db.ref("accounts/"+type+"/"+username);	 //admin or normal
+	var ref = db.ref("accounts/"+type);	 //admin or normal
 	ref.once("value", function(snapshot) {
-		var resp = snapshot.val();
-		if (resp) {
-			if (password == resp.password) {
-			res.status(200).send(resp); 	
-			} else {
-				res.status(403).send({errorMessage: "Incorrect Password"}); 
-			}	
+		var resp = snapshot.val(); 
+		var tempObject = {};
+		for(var i in resp){ 
+		  for(var j in resp[i]) {  
+		  	var isValid = true;
+		  	if (j == "email") {
+		  		if (resp[i][j] == username) {
+		  			tempObject = resp[i];
+		  			break;	
+		  		}	
+		  	}	
+		  }
+		} 
+		if (!tempObject) {
+			res.status(403).send({errorMessage: "No user found"}); 
 		} else {
-			res.status(403).send({errorMessage: "User not found"}); 
-		}
+			for(var i in tempObject){  
+				if (i == "password") {
+					if (password == tempObject[i]) {
+						res.status(200).send(tempObject); 
+					} else {
+						res.status(403).send({errorMessage: "Incorrent password"}); 	
+					}
+				}
+			}
+		} 
+
+		// if (resp) {
+		// 	if (password == resp.password) {
+		// 	res.status(200).send(resp); 	
+		// 	} else {
+		// 		res.status(403).send({errorMessage: "Incorrect Password"}); 
+		// 	}	
+		// } else {
+		// 	res.status(403).send({errorMessage: "User not found"}); 
+		// }
 		
 	}, function (errorObject) {
 		res.status(403).send(errorObject.code);  
@@ -193,3 +233,8 @@ function sendNotificationToUser(payload, username, type, res) {
 	});
 }
 
+function validateEmail(email) 
+{
+    var re = /\S+@\S+\.\S+/;
+    return re.test(email);
+}
