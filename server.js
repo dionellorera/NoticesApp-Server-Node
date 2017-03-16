@@ -68,7 +68,7 @@ app.post('/user/login', function(req, res){
 
 
 app.post('/fcm/register', function(req, res){
-	registerFcm(req.body.username, req.body.type, req.body.token, res) 
+	registerFcm(req.body.uid, req.body.username, req.body.type, req.body.token, res) 
 }); 
 
 app.post('/fcm/send/all', function(req, res){
@@ -111,7 +111,7 @@ function login(type, username, password, res) {
 					if (password == tempObject[i]) {
 						res.status(200).send(tempObject); 
 					} else {
-						res.status(403).send({errorMessage: "Incorrent password"}); 	
+						res.status(403).send({errorMessage: "Incorrect password"}); 	
 					}
 				}
 			}
@@ -169,12 +169,13 @@ function createUser(uname, eadd, name, type, p, ph, res) {
 	}); 
 }
 
-function registerFcm(uname, type, t, res) {
+function registerFcm(uniqid, uname, type, t, res) {
 	var db = admin.database();
 	var ref = db.ref("accounts/"+type);	 //admin or normal
 	var f = ref.child(uname);
 	var object = {
-		token: t
+		token: t,
+		uid: uniqid
 	 	}; 
 	f.update(object); 
 	res.status(200).send({status: "success"}); 
